@@ -1,8 +1,11 @@
+mod auth;
 mod handler;
+mod login;
 mod model;
 mod response;
 mod route;
 
+use auth::jwt_auth;
 use axum::http::{
     header::{ACCEPT, AUTHORIZATION, CONTENT_TYPE},
     HeaderValue, Method,
@@ -18,7 +21,9 @@ async fn main() {
         .allow_credentials(true)
         .allow_headers([AUTHORIZATION, ACCEPT, CONTENT_TYPE]);
 
-    let app = create_router().layer(cors);
+    let app = create_router()
+        .layer(axum::middleware::from_fn(jwt_auth)) // added JWT auth middleware
+        .layer(cors);
 
     println!("🚀 Server started successfully");
     let listener = tokio::net::TcpListener::bind("0.0.0.0:8000").await.unwrap();

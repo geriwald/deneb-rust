@@ -23,14 +23,13 @@ pub async fn health_checker_handler() -> impl IntoResponse {
 }
 
 pub async fn todos_list_handler(
+    Query(options): Query<QueryOptions>,
     State(db): State<DB>,
-    Query(opts): Query<Option<QueryOptions>>,
 ) -> impl IntoResponse {
-    let opts = opts.unwrap_or_default();
-    let todos = db.lock().await;
-    let limit = opts.limit.unwrap_or(10);
-    let offset = (opts.page.unwrap_or(1) - 1) * limit;
+    let limit = options.limit.unwrap_or(10);
+    let offset = (options.page.unwrap_or(1) - 1) * limit;
 
+    let todos = db.lock().await;
     let todos: Vec<Todo> = todos.clone().into_iter().skip(offset).take(limit).collect();
 
     let json_response = TodoListResponse {
