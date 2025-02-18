@@ -10,7 +10,7 @@ pub struct Claims {
     pub exp: usize,
 }
 
-pub fn create_jwt(sub: &str, password: &str) -> Result<String, jsonwebtoken::errors::Error> {
+pub fn create_jwt(sub: &str) -> Result<String, jsonwebtoken::errors::Error> {
     let secret = env::var("JWT_SECRET").unwrap_or_else(|_| "default_secret".to_string());
     let expiration = (Utc::now() + Duration::seconds(3600)).timestamp() as usize;
     let claims = Claims {
@@ -42,12 +42,21 @@ where
         return Ok(next.run(req.map(Into::into)).await);
     }
 
+    // Extract token from cookies
     let token = req
         .headers()
-        .get("Authorization")
-        .and_then(|value| value.to_str().ok())
-        .and_then(|auth_header| auth_header.strip_prefix("Bearer "))
-        .map(|s| s.to_string());
+        .get("Cookie")
+        .and_then(|cookie_val| cookie_val.to_str().ok())
+        .and_then(|cookies| {
+            cookies.split(';').find_map(|cookie| {
+                let cookie = cookie.trim();
+                if cookie.starts_with("token=") {
+                    Some(cookie.trim_start_matches("token=").to_string())
+                } else {
+                    None
+                }
+            })
+        });
 
     if let Some(token) = token {
         let secret = env::var("JWT_SECRET").unwrap_or_else(|_| "default_secret".to_string());
