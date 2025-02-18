@@ -7,29 +7,20 @@ use axum::{
 use uuid::Uuid;
 
 use crate::{
-    model::{QueryOptions, Todo, UpdateTodoSchema, DB},
+    models::query_options::QueryOptions,
+    models::todo::{Todo, DB},
+    models::update_todo_schema::UpdateTodoSchema,
     response::{SingleTodoResponse, TodoData, TodoListResponse},
 };
 
-pub async fn health_checker_handler() -> impl IntoResponse {
-    const MESSAGE: &str = "Build Simple CRUD API in Rust using Axum";
-
-    let json_response = serde_json::json!({
-        "status": "success",
-        "message": MESSAGE
-    });
-
-    Json(json_response)
-}
-
-pub async fn todos_list_handler(
+pub async fn list_todos_handler(
+    Query(options): Query<QueryOptions>,
     State(db): State<DB>,
-    Query(opts): Query<Option<QueryOptions>>,
 ) -> impl IntoResponse {
-    let opts = opts.unwrap_or_default();
+    let limit = options.limit.unwrap_or(10);
+    let offset = (options.page.unwrap_or(1) - 1) * limit;
+
     let todos = db.lock().await;
-    let limit = opts.limit.unwrap_or(10);
-    let offset = (opts.page.unwrap_or(1) - 1) * limit;
 
     let todos: Vec<Todo> = todos.clone().into_iter().skip(offset).take(limit).collect();
 
